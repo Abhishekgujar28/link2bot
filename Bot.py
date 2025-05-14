@@ -7,7 +7,11 @@ from datetime import datetime, timedelta
 
 import logging
 from dotenv import load_dotenv
-load_dotenv()
+# Try to load .env file, but don't fail if it doesn't exist (for Heroku)
+try:
+    load_dotenv()
+except:
+    pass
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 from telegram import (
@@ -24,7 +28,11 @@ from telegram.ext import (
     filters,
 )
 
+# Get the token from environment variables
 TOKEN = os.environ.get("BOT_TOKEN")
+if not TOKEN:
+    raise ValueError("No BOT_TOKEN found in environment variables. Please set it and try again.")
+
 ADMIN_ID = 8061997651
 
 DATA_FILE = "data.json"
@@ -246,41 +254,51 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(help_text, parse_mode="Markdown")
 
 def main():
-    app = Application.builder().token(TOKEN).build()
+    try:
+        # Explicitly log the token status (without showing the actual token)
+        if TOKEN:
+            logger.info("Bot token found, initializing bot...")
+        else:
+            logger.error("No bot token found!")
+            return
+            
+        app = Application.builder().token(TOKEN).build()
 
-    async def startup(_: Application):
-        await app.bot.delete_webhook(drop_pending_updates=True)
+        async def startup(_: Application):
+            await app.bot.delete_webhook(drop_pending_updates=True)
 
-    app.post_init = startup
+        app.post_init = startup
 
-    add_handler = ConversationHandler(
-        entry_points=[CommandHandler("add", add_channel)],
-        states={ADD_CHANNEL: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_channel_id)]},
-        fallbacks=[CommandHandler("cancel", cancel)],
-    )
+        add_handler = ConversationHandler(
+            entry_points=[CommandHandler("add", add_channel)],
+            states={ADD_CHANNEL: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_channel_id)]},
+            fallbacks=[CommandHandler("cancel", cancel)],
+        )
 
-    delete_handler = ConversationHandler(
-        entry_points=[CommandHandler("del", delete_channel)],
-        states={DEL_CHANNEL: [MessageHandler(filters.TEXT & ~filters.COMMAND, confirm_delete_channel)]},
-        fallbacks=[CommandHandler("cancel", cancel)],
-    )
+        delete_handler = ConversationHandler(
+            entry_points=[CommandHandler("del", delete_channel)],
+            states={DEL_CHANNEL: [MessageHandler(filters.TEXT & ~filters.COMMAND, confirm_delete_channel)]},
+            fallbacks=[CommandHandler("cancel", cancel)],
+        )
 
-    delall_handler = ConversationHandler(
-        entry_points=[CommandHandler("delall", delete_all_channels)],
-        states={DEL_ALL_CONFIRM: [MessageHandler(filters.TEXT & ~filters.COMMAND, confirm_delete_all)]},
-        fallbacks=[CommandHandler("cancel", cancel)],
-    )
+        delall_handler = ConversationHandler(
+            entry_points=[CommandHandler("delall", delete_all_channels)],
+            states={DEL_ALL_CONFIRM: [MessageHandler(filters.TEXT & ~filters.COMMAND, confirm_delete_all)]},
+            fallbacks=[CommandHandler("cancel", cancel)],
+        )
 
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(add_handler)
-    app.add_handler(delete_handler)
-    app.add_handler(delall_handler)
-    app.add_handler(CommandHandler("list", list_channels))
-    app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(CommandHandler("cancel", cancel))
+        app.add_handler(CommandHandler("start", start))
+        app.add_handler(add_handler)
+        app.add_handler(delete_handler)
+        app.add_handler(delall_handler)
+        app.add_handler(CommandHandler("list", list_channels))
+        app.add_handler(CommandHandler("help", help_command))
+        app.add_handler(CommandHandler("cancel", cancel))
 
-    logger.info("Bot is running...")
-    app.run_polling()
+        logger.info("Bot is running...")
+        app.run_polling()
+    except Exception as e:
+        logger.error(f"Error starting bot: {e}")
 
 if __name__ == "__main__":
     main()
