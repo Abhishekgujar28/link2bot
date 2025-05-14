@@ -24,7 +24,12 @@ from telegram.ext import (
     filters,
 )
 
+# Get the token from environment variables or use the hardcoded one if not found
 TOKEN = os.environ.get("BOT_TOKEN")
+# If no token found in environment variables, use the one from env.txt
+if not TOKEN:
+    TOKEN = "7154242840:AAFKxPZPmUfFkrQidkFg77CavcmU1ki8JLE"
+
 ADMIN_ID = 7560481124
 
 DATA_FILE = "data.json"
