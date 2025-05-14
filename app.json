@@ -1,0 +1,17 @@
+{
+  "name": "Telegram Invite Bot",
+  "description": "A Telegram bot that creates invite links for channels and generates unique referral codes",
+  "repository": "",
+  "keywords": ["python", "telegram", "bot"],
+  "env": {
+    "BOT_TOKEN": {
+      "description": "Your Telegram Bot Token",
+      "required": true
+    }
+  },
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    }
+  ]
+} 
